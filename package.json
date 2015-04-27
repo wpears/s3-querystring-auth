@@ -1,0 +1,30 @@
+{
+  "name": "s3-querystring-auth",
+  "version": "0.0.1",
+  "description": "Easy way to use querystring auth for S3",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wpears/s3-querystring-auth.git"
+  },
+  "keywords": [
+    "S3",
+    "querystring",
+    "authorization"
+  ],
+  "author": "Wyatt Pearsall <wyatt.pearsall@cfpb.gov>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wpears/s3-querystring-auth/issues"
+  },
+  "homepage": "https://github.com/wpears/s3-querystring-auth",
+  "devDependencies": {
+    "tape": "^4.0.0"
+  },
+  "dependencies": {
+    "request": "^2.55.0"
+  }
+}
