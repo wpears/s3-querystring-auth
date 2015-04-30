@@ -3,6 +3,7 @@ var crypto = require('crypto');
 var util = require('util');
 var aws = require('aws-sdk');
 
+
 function getUrl(bucket, resource, profile){
   var credentials;
 
@@ -13,39 +14,58 @@ function getUrl(bucket, resource, profile){
   }
   
   var isoCombined = (new Date()).toISOString().replace(/[:-]|\.\d{3}/g,'');
-  var isoDate = isoCombined.slice(0,8);
+  var scope = getScope(isoCombined);
 
-  var queryParams = [
-    {param: 'X-Amz-Algorithm', value: 'AWS4-HMAC-SHA256'},
-    {param: 'X-Amz-Credential', value: util.format('%s/%s/us-east-1/s3/aws4_request', credentials.accessKeyId, isoDate)},
-    {param: 'X-Amz-Date', value: isoCombined},
-    {param: 'X-Amz-Expires', value: '86400'},
-    {param: 'X-Amz-SignedHeaders', value: 'host'},
-    {param: 'X-Amz-Signature', value: calculateSignature()}
-  ].sort(function(a,b){return a.param > b.param})
-    console.log(queryParams);
-}
-getUrl();
+  var queryParams = {
+    'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+    'X-Amz-Credential': util.format('%s/%s', credentials.accessKeyId, scope),
+    'X-Amz-Date': isoCombined,
+    'X-Amz-Expires': '86400',
+    'X-Amz-SignedHeaders': 'host',
+    'X-Amz-Signature': null
+  }
 
-function calculateSignature(credentials, isoCombined){
-  return hmac(getSigningKey(credentials, isoCombined), getStringToSign());
-}
-
-
-function getSigningKey(credentials, isoDate){
-  var dateKey = hmac("AWS4" + credentials.secretAccessKey, isoCombined.slice(0,8)); 
-  var dateRegionKey = hmac(dateKey, 'us-east-1');
-  var dateRegionServiceKey = hmac(dateRegionKey, 's3');
-  return hmac(dateRegionServiceKey, 'aws4_request')
-}
-
-
-function getStringToSign(){
+  queryParams['X-Amz-Signature'] = calculateSignature(resource, credentials, scope, queryParams);
 
 }
 
 
-function getCanonicalRequest(){
+function getScope(isoCombined){
+  return isoCombined.slice(0,8) + '/us-east-1/s3/aws4_request';
+}
+
+
+function calculateSignature(resource, credentials, scope, queryParams){
+  var signingKey = getSigningKey(credentials.secretAccessKey, scope.split('/')[0]) 
+  var stringToSign = getStringToSign(resource, scope, queryParams);
+
+  return hmac(signingKey, stringToSign);
+}
+
+
+function getSigningKey(secretAccessKey, scope){
+  var scopeArr = scope.split('/');
+  var dateKey = hmac("AWS4" + secretAccessKey, scope[0]); 
+  var dateRegionKey = hmac(dateKey, scope[1]);
+  var dateRegionServiceKey = hmac(dateRegionKey, scope[2]);
+
+  return hmac(dateRegionServiceKey, scope[3])
+}
+
+
+function getStringToSign(resource, scope, queryParams){
+  var canonicalRequest = getCanonicalRequest(resource, queryParams);
+
+  return util.format('%s\n%s\n%s\n%s',
+    queryParams['X-Amz-Algorithm'],
+    queryParams['X-Amz-Date'],
+    scope,
+    crypto.createHash('sha256').update(canonicalRequest).digest('hex')
+  )
+}
+
+
+function getCanonicalRequest(resource, queryParams){
 
 }
 
