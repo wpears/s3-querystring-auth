@@ -15,7 +15,7 @@ function getUrl(bucket, resource, profile){
    credentials = new aws.SharedIniFileCredentials({profile: profile});
   }
   
-  var isoCombined = (new Date('Fri, 24 May 2013 00:00:00 GMT')).toISOString().replace(/[:-]|\.\d{3}/g,'');
+  var isoCombined = (new Date()).toISOString().replace(/[:-]|\.\d{3}/g,'');
   var scope = getScope(isoCombined);
 
   var queryParams = {
