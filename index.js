@@ -4,9 +4,9 @@ var util = require('util');
 var aws = require('aws-sdk');
 
 
-function getUrl(bucket, resource, profile){
+function getUrl(bucket, resource, region, profile){
   if(resource[0] !== '/') resource = '/' + resource;
-
+  if(!region) region = 'us-east-1'
   var credentials;
 
   if(process.env.AWS_ACCESS_KEY_ID){
@@ -16,7 +16,7 @@ function getUrl(bucket, resource, profile){
   }
   
   var isoCombined = (new Date()).toISOString().replace(/[:-]|\.\d{3}/g,'');
-  var scope = getScope(isoCombined);
+  var scope = getScope(isoCombined, region);
 
   var queryParams = {
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
@@ -41,8 +41,8 @@ function getUrl(bucket, resource, profile){
 }
 
 
-function getScope(isoCombined){
-  return isoCombined.slice(0,8) + '/us-east-1/s3/aws4_request';
+function getScope(isoCombined, region){
+  return util.format('%s/%s/s3/aws4_request', isoCombined.slice(0,8), region);
 }
 
 
