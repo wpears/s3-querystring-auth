@@ -75,3 +75,36 @@ function hmac(key, data){
   hmacObj.update(data);
   return hmacObj.digest();
 }
+
+public static String uri-encode(CharSequence input, boolean encodeSlash) {
+              if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '~' || ch == '.') {
+                  result.append(ch);
+              } else if (ch == '/') {
+                  result.append(encodeSlash ? "%2F" : ch);
+              } else {
+                  result.append(toHexUTF8(ch));
+              }
+          }
+          return result.toString();
+      }
+
+function encodeAwsUri(input, ignoreSlash){
+  var result = '';
+  var allowed = /[\w~\-.]/
+
+  for(var i=0; i<input.length; i++){
+    var curr = input[i];
+
+    if(allowed.test(curr) || curr === '/' && ignoreSlash) {
+      result += curr;  
+    }else{ 
+      result += escapeChar(curr);
+    }
+  }
+
+  return result;
+}
+
+function escapeChar(character){
+  return '%' + (new Buffer(character)).toString('hex').toUpperCase()
+}
