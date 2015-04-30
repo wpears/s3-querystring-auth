@@ -25,7 +25,7 @@ function getUrl(bucket, resource, profile){
     'X-Amz-Signature': null
   }
 
-  queryParams['X-Amz-Signature'] = calculateSignature(resource, credentials, scope, queryParams);
+  queryParams['X-Amz-Signature'] = calculateSignature(bucket, resource, credentials, scope, queryParams);
 
 }
 
@@ -35,9 +35,10 @@ function getScope(isoCombined){
 }
 
 
-function calculateSignature(resource, credentials, scope, queryParams){
+function calculateSignature(bucket, resource, credentials, scope, queryParams){
+  var canonicalRequest = getCanonicalRequest(bucket, resource, queryParams);
   var signingKey = getSigningKey(credentials.secretAccessKey, scope.split('/')[0]) 
-  var stringToSign = getStringToSign(resource, scope, queryParams);
+  var stringToSign = getStringToSign(canonicalRequest, scope, queryParams);
 
   return hmac(signingKey, stringToSign);
 }
@@ -53,8 +54,7 @@ function getSigningKey(secretAccessKey, scope){
 }
 
 
-function getStringToSign(resource, scope, queryParams){
-  var canonicalRequest = getCanonicalRequest(resource, queryParams);
+function getStringToSign(canonicalRequest, scope, queryParams){
 
   return util.format('%s\n%s\n%s\n%s',
     queryParams['X-Amz-Algorithm'],
@@ -65,7 +65,19 @@ function getStringToSign(resource, scope, queryParams){
 }
 
 
-function getCanonicalRequest(resource, queryParams){
+function getCanonicalRequest(bucket, resource, queryParams){
+
+  var queryString = Object.keys(queryParams).reduce(function(a, b){
+    if(!queryParams[b]){
+      return a;
+    }
+    return a + (a?'&':'') + encodeAwsUri(b) + '=' + encodeAwsUri(queryParams[b])
+  }, '') 
+   
+  return util.format('%s\n%s\n%s\n%s\n%s\n%s',
+           'GET',
+           encodeAwsUri(resource, 1),
+           queryString
 
 }
 
@@ -76,17 +88,6 @@ function hmac(key, data){
   return hmacObj.digest();
 }
 
-public static String uri-encode(CharSequence input, boolean encodeSlash) {
-              if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '~' || ch == '.') {
-                  result.append(ch);
-              } else if (ch == '/') {
-                  result.append(encodeSlash ? "%2F" : ch);
-              } else {
-                  result.append(toHexUTF8(ch));
-              }
-          }
-          return result.toString();
-      }
 
 function encodeAwsUri(input, ignoreSlash){
   var result = '';
