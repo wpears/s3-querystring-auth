@@ -3,6 +3,8 @@ var crypto = require('crypto');
 var util = require('util');
 var aws = require('aws-sdk');
 
+process.env.AWS_ACCESS_KEY_ID = 'AKIAIOSFODNN7EXAMPLE';
+process.env.AWS_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY';
 
 function getUrl(bucket, resource, profile){
   var credentials;
@@ -13,7 +15,7 @@ function getUrl(bucket, resource, profile){
    credentials = new aws.SharedIniFileCredentials({profile: profile});
   }
   
-  var isoCombined = (new Date()).toISOString().replace(/[:-]|\.\d{3}/g,'');
+  var isoCombined = (new Date('Fri, 24 May 2013 00:00:00 GMT')).toISOString().replace(/[:-]|\.\d{3}/g,'');
   var scope = getScope(isoCombined);
 
   var queryParams = {
@@ -26,9 +28,10 @@ function getUrl(bucket, resource, profile){
   }
 
   queryParams['X-Amz-Signature'] = calculateSignature(bucket, resource, credentials, scope, queryParams);
+  console.log(queryParams['X-Amz-Signature'].toString('hex'));
 
 }
-
+getUrl('examplebucket', '/test.txt');
 
 function getScope(isoCombined){
   return isoCombined.slice(0,8) + '/us-east-1/s3/aws4_request';
@@ -37,25 +40,26 @@ function getScope(isoCombined){
 
 function calculateSignature(bucket, resource, credentials, scope, queryParams){
   var canonicalRequest = getCanonicalRequest(bucket, resource, queryParams);
-  var signingKey = getSigningKey(credentials.secretAccessKey, scope.split('/')[0]) 
+  var signingKey = getSigningKey(credentials.secretAccessKey, scope) 
   var stringToSign = getStringToSign(canonicalRequest, scope, queryParams);
-
+  console.log(canonicalRequest);
+  console.log(stringToSign);
+ 
   return hmac(signingKey, stringToSign);
 }
 
 
 function getSigningKey(secretAccessKey, scope){
   var scopeArr = scope.split('/');
-  var dateKey = hmac("AWS4" + secretAccessKey, scope[0]); 
-  var dateRegionKey = hmac(dateKey, scope[1]);
-  var dateRegionServiceKey = hmac(dateRegionKey, scope[2]);
+  var dateKey = hmac("AWS4" + secretAccessKey, scopeArr[0]); 
+  var dateRegionKey = hmac(dateKey, scopeArr[1]);
+  var dateRegionServiceKey = hmac(dateRegionKey, scopeArr[2]);
 
-  return hmac(dateRegionServiceKey, scope[3])
+  return hmac(dateRegionServiceKey, scopeArr[3])
 }
 
 
 function getStringToSign(canonicalRequest, scope, queryParams){
-
   return util.format('%s\n%s\n%s\n%s',
     queryParams['X-Amz-Algorithm'],
     queryParams['X-Amz-Date'],
@@ -74,11 +78,14 @@ function getCanonicalRequest(bucket, resource, queryParams){
     return a + (a?'&':'') + encodeAwsUri(b) + '=' + encodeAwsUri(queryParams[b])
   }, '') 
    
-  return util.format('%s\n%s\n%s\n%s\n%s\n%s',
-           'GET',
+  return util.format('%s\n%s\n%s\n%s\n\n%s\n%s',
+          'GET',
            encodeAwsUri(resource, 1),
-           queryString
-
+           queryString,
+          'host:' + bucket.trim() + '.s3.amazonaws.com',
+          'host',
+          'UNSIGNED-PAYLOAD'
+         )
 }
 
 
