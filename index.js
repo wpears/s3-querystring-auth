@@ -3,10 +3,10 @@ var crypto = require('crypto');
 var util = require('util');
 var aws = require('aws-sdk');
 
-process.env.AWS_ACCESS_KEY_ID = 'AKIAIOSFODNN7EXAMPLE';
-process.env.AWS_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY';
 
 function getUrl(bucket, resource, profile){
+  if(resource[0] !== '/') resource = '/' + resource;
+
   var credentials;
 
   if(process.env.AWS_ACCESS_KEY_ID){
@@ -28,10 +28,18 @@ function getUrl(bucket, resource, profile){
   }
 
   queryParams['X-Amz-Signature'] = calculateSignature(bucket, resource, credentials, scope, queryParams);
-  console.log(queryParams['X-Amz-Signature'].toString('hex'));
-
+  
+  return util.format('https://%s.s3.amazonaws.com%s?%s',
+           bucket,
+           resource,
+           Object.keys(queryParams)
+            .map(function(v){
+              return v + '=' + encodeAwsUri(queryParams[v]);
+            })
+            .join('&')
+         )
 }
-getUrl('examplebucket', '/test.txt');
+
 
 function getScope(isoCombined){
   return isoCombined.slice(0,8) + '/us-east-1/s3/aws4_request';
@@ -42,10 +50,8 @@ function calculateSignature(bucket, resource, credentials, scope, queryParams){
   var canonicalRequest = getCanonicalRequest(bucket, resource, queryParams);
   var signingKey = getSigningKey(credentials.secretAccessKey, scope) 
   var stringToSign = getStringToSign(canonicalRequest, scope, queryParams);
-  console.log(canonicalRequest);
-  console.log(stringToSign);
  
-  return hmac(signingKey, stringToSign);
+  return hmac(signingKey, stringToSign).toString('hex');
 }
 
 
@@ -71,7 +77,7 @@ function getStringToSign(canonicalRequest, scope, queryParams){
 
 function getCanonicalRequest(bucket, resource, queryParams){
 
-  var queryString = Object.keys(queryParams).reduce(function(a, b){
+  var queryString = Object.keys(queryParams).sort().reduce(function(a, b){
     if(!queryParams[b]){
       return a;
     }
@@ -113,6 +119,10 @@ function encodeAwsUri(input, ignoreSlash){
   return result;
 }
 
+
 function escapeChar(character){
   return '%' + (new Buffer(character)).toString('hex').toUpperCase()
 }
+
+
+module.exports = getUrl;
